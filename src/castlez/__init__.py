@@ -1,5 +1,4 @@
 import random
-import math
 
 import keyboard
 import colex
@@ -13,7 +12,6 @@ from charz import (
     Camera,
     ColorValue,
     Vec2,
-    lerp,
 )
 
 from .text_collider import TextCollider
@@ -177,7 +175,10 @@ class Spinner(Sprite):
 
 class Game(Engine):
     clear_console = True
-    screen = Screen(auto_resize=True)
+    screen = Screen(
+        auto_resize=True,
+        initial_clear=True,
+    )
 
     def __init__(self) -> None:
         self.knight = Knight()
