@@ -246,11 +246,6 @@ class Game(Engine):
             centered=True,
             z_index=-5,
         )
-        self.dev_label = Label(
-            self.knight,
-            text="???",
-            position=Vec2(-5, -4),
-        )
 
     def update(self) -> None:
         hex_value = "".join("0123456789ABCDEF"[random.randint(0, 15)] for _ in range(6))
@@ -258,7 +253,6 @@ class Game(Engine):
         self.rand_label.color = colex.from_hex(hex_value)
 
         self.spinner1.look_at(self.knight.global_position)
-        self.dev_label.text = f"{math.degrees(self.spinner1.global_rotation):.2f}"
         self.spinner2.look_at(self.knight.global_position)
 
 
