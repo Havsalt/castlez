@@ -5,7 +5,7 @@ import keyboard
 import colex
 from charz import (
     Engine,
-    Transform,
+    TransformComponent,
     Screen,
     Node2D,
     Sprite,
@@ -34,8 +34,8 @@ class SmoothCamera(Camera):
     # _PERCENT_PER_SECOND: float = 2.90
     top_level = True
 
-    def update(self, delta: float) -> None:
-        assert isinstance(self.parent, Transform)
+    def update(self) -> None:
+        assert isinstance(self.parent, TransformComponent)
         self.global_position = self.global_position.lerp(
             self.parent.global_position,
             # self._PERCENT_PER_SECOND * delta,
@@ -51,7 +51,7 @@ class Marker(Sprite):
     texture = ["[?]"]
 
 
-class Knight(Sprite, TextCollider):
+class Knight(TextCollider, Sprite):
     z_index = -1
     color = colex.KHAKI
     texture = ["@"]
@@ -59,8 +59,8 @@ class Knight(Sprite, TextCollider):
     def __init__(self) -> None:
         self._marker = Marker()
 
-    def update(self, _delta: float) -> None:
-        velocity = Vec2()
+    def update(self) -> None:
+        velocity = Vec2.ZERO
         if keyboard.is_pressed("d"):
             velocity.x += 1
         if keyboard.is_pressed("a"):
@@ -74,7 +74,7 @@ class Knight(Sprite, TextCollider):
             self._marker.global_position = self.global_position
 
 
-class Tower(Sprite, TextCollider):
+class Tower(TextCollider, Sprite):
     texture = [
         "#.#.#",
         "#####",
@@ -83,7 +83,7 @@ class Tower(Sprite, TextCollider):
     ]
 
 
-class Gate(Sprite, TextCollider):
+class Gate(TextCollider, Sprite):
     transparency = " "
     texture = [
         " #.#.#.#.# ",
@@ -122,9 +122,9 @@ class Castle(Node2D):
         self._watch_for: list[Knight] = list(watch_for)
         self._entries: list[MagicGate] = []
 
-    def update(self, delta: float) -> None:
+    def update(self) -> None:
         for node in self._watch_for:
-            if node.global_position - self.global_position == Vec2(0, 0):
+            if node.global_position - self.global_position == Vec2.ZERO:
                 entry = random.choice(self._entries)
                 node.global_position = entry.global_position + Vec2(0, 2)
 
@@ -152,7 +152,7 @@ class MagicGate(Sprite):
         self._exits: list[Node2D] = []
         self.color = random.choice(self._COLORS)
 
-    def update(self, delta: float) -> None:
+    def update(self) -> None:
         self.color = random.choice(self._COLORS)
         for node in self._watch_for:
             if node.global_position - self.global_position == Vec2(1, 2):
@@ -172,10 +172,10 @@ class Spinner(Sprite):
     ]
 
     def look_at(self, location: Vec2) -> None:
-        self.global_rotation = self.global_position.angle_to(location)
+        self.global_rotation = -self.global_position.angle_to(location)
 
 
-class App(Engine):
+class Game(Engine):
     clear_console = True
     screen = Screen(auto_resize=True)
 
@@ -185,7 +185,7 @@ class App(Engine):
             self.knight,
             position=Vec2(5, -3),
             z_index=1,
-            color=colex.BRIGHT_CYAN,
+            color=colex.LIGHT_CYAN,
         )
         self.castle2 = Castle(
             self.knight,
@@ -226,17 +226,18 @@ class App(Engine):
         self.spinner1 = Spinner(
             self.magic_gate,
             position=Vec2(-20, 7),
-            color=colex.rand_color(),
+            color=colex.from_random(),
         )
         self.spinner2 = Spinner(
             self.magic_gate,
             position=Vec2(-20, -3),
-            color=colex.rand_color(),
+            color=colex.from_random(),
         )
-        # Set camera
-        SmoothCamera().with_mode(
-            Camera.MODE_CENTERED | Camera.MODE_INCLUDE_SIZE
-        ).with_parent(self.knight).as_current()
+        # Set current camera to be smooth and centered
+        Camera.current = SmoothCamera(
+            self.knight,
+            mode=Camera.MODE_CENTERED | Camera.MODE_INCLUDE_SIZE,
+        )
         # Dev
         self.rand_label = Label(
             self.knight,
@@ -245,18 +246,22 @@ class App(Engine):
             centered=True,
             z_index=-5,
         )
+        self.dev_label = Label(
+            self.knight,
+            text="???",
+            position=Vec2(-5, -4),
+        )
 
-    def update(self, delta: float) -> None:
+    def update(self) -> None:
         hex_value = "".join("0123456789ABCDEF"[random.randint(0, 15)] for _ in range(6))
         self.rand_label.text = "#" + hex_value
-        self.rand_label.color = colex.hex_color(hex_value)
+        self.rand_label.color = colex.from_hex(hex_value)
 
         self.spinner1.look_at(self.knight.global_position)
-        self.spinner1.rotation += math.radians(180)
+        self.dev_label.text = f"{math.degrees(self.spinner1.global_rotation):.2f}"
         self.spinner2.look_at(self.knight.global_position)
-        self.spinner2.rotation += math.radians(180)
 
 
-def main() -> int:
-    App().run()
-    return 0
+def main() -> None:
+    game = Game()
+    game.run()

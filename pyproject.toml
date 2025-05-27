@@ -6,8 +6,7 @@ authors = [
     { name = "Havsalt" }
 ]
 dependencies = [
-    "charz>=0.0.25",
-    "keyboard>=0.13.5",
+    "charz[keyboard]==0.1.0.dev3",
 ]
 readme = "README.md"
 license.file = "LICENSE.txt"

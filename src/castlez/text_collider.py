@@ -1,56 +1,65 @@
 from __future__ import annotations
 
-from charz import Transform
+from typing import Any
+
+from charz import Scene, TransformComponent, TextureComponent, Self, group
 from linflex import Vec2
-from typing_extensions import Self
 
 
+TEXT_COLLIDER_GID = "text_collider"
+
+
+@group(TEXT_COLLIDER_GID)
 class TextCollider:  # Component (mixin class)
-    _colliders = []
-
-    def __new__(cls, *args, **kwargs) -> Self:
-        instance = super().__new__(cls, *args, **kwargs)
-        TextCollider._colliders.append(instance)
-        return instance
+    def __new__(cls, *args: Any, **kwargs: Any) -> Self:
+        return super().__new__(cls, *args, **kwargs)
 
     def _get_texture_global_position(self) -> Vec2:
-        assert isinstance(self, Transform)
+        assert isinstance(self, TransformComponent)
         return self.global_position
 
     def move_and_collide(self, distance: Vec2) -> None:
+        assert isinstance(self, TextureComponent)
         old_position = self.position.copy()
         self.position += distance
         if collider := self.get_collider():
             self.position = old_position
             self.position.y = (
-                collider._get_texture_global_position().y - self.texture_size.y
+                collider._get_texture_global_position().y - self.get_texture_size().y
             )
 
     def move_and_slide(self, distance: Vec2) -> None:
+        assert isinstance(self, TextureComponent)
         old_position = self.position.copy()
         self.position.x += distance.x
         signs = distance.sign()
         if collider := self.get_collider():
+            assert isinstance(collider, TextureComponent)
             self.position = old_position
             if signs.x == 1:
                 self.position.x = (
-                    collider._get_texture_global_position().x - self.texture_size.x
+                    collider._get_texture_global_position().x
+                    - self.get_texture_size().x
                 )
             elif signs.x == -1:
                 self.position.x = (
-                    collider._get_texture_global_position().x + collider.texture_size.x
+                    collider._get_texture_global_position().x
+                    + collider.get_texture_size().x
                 )
         old_position = self.position.copy()
         self.position.y += distance.y
         if collider := self.get_collider():
+            assert isinstance(collider, TextureComponent)
             self.position = old_position
             if signs.y == 1:
                 self.position.y = (
-                    collider._get_texture_global_position().y - self.texture_size.y
+                    collider._get_texture_global_position().y
+                    - self.get_texture_size().y
                 )
             elif signs.y == -1:
                 self.position.y = (
-                    collider._get_texture_global_position().y + collider.texture_size.y
+                    collider._get_texture_global_position().y
+                    + collider.get_texture_size().y
                 )
 
     def is_on_floor(self) -> bool:
@@ -61,7 +70,8 @@ class TextCollider:  # Component (mixin class)
         return on_floor
 
     def is_colliding(self) -> bool:
-        for collider in TextCollider._colliders:
+        for collider in Scene.current.get_group_members(TEXT_COLLIDER_GID):
+            assert isinstance(collider, TextCollider)
             if collider is self:
                 continue
             elif self.is_colliding_with(collider):
@@ -69,7 +79,8 @@ class TextCollider:  # Component (mixin class)
         return False
 
     def get_collider(self) -> TextCollider | None:
-        for collider in TextCollider._colliders:
+        for collider in Scene.current.get_group_members(TEXT_COLLIDER_GID):
+            assert isinstance(collider, TextCollider)
             if collider is self:
                 continue
             elif self.is_colliding_with(collider):
@@ -77,17 +88,20 @@ class TextCollider:  # Component (mixin class)
         return None
 
     def is_colliding_with(self, other: TextCollider) -> bool:
+        assert isinstance(self, TextureComponent)
+        assert isinstance(other, TextureComponent)
         # basic implementation
         position = self._get_texture_global_position()
         start = other._get_texture_global_position()
-        rect = (start, start + other.texture_size)  # start, end
+        texture_size = self.get_texture_size()  # cache using variable
+        rect = (start, start + other.get_texture_size())  # start, end
         return any(  # any intersects
             self._point_intersects_with(point, rect)
             for point in [
                 position + Vec2(0, 1),
-                position + self.texture_size,
-                position + Vec2(self.texture_size.x, 1),
-                position + Vec2(0, self.texture_size.y),
+                position + texture_size,
+                position + Vec2(texture_size.x, 1),
+                position + Vec2(0, texture_size.y),
             ]
         )
 
@@ -96,8 +110,3 @@ class TextCollider:  # Component (mixin class)
         x_inside = start.x < point.x < end.x
         y_inside = start.y < point.y <= end.y
         return x_inside and y_inside
-
-    def queue_free(self) -> None:
-        if self in TextCollider._colliders:
-            TextCollider._colliders.remove(self)
-        super().queue_free()
