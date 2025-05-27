@@ -248,7 +248,7 @@ class Game(Engine):
         )
 
     def update(self) -> None:
-        hex_value = "".join("0123456789ABCDEF"[random.randint(0, 15)] for _ in range(6))
+        hex_value = "".join(random.choices("0123456789ABCDEF", k=6))
         self.rand_label.text = "#" + hex_value
         self.rand_label.color = colex.from_hex(hex_value)
 
